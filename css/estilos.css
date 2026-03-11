@@ -377,3 +377,22 @@ input {
     font-size: 30px;
     margin: 0 auto 10px;
 }
+.volver {
+    background: linear-gradient(90deg, #4a148c, #e91e63);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s ease;
+    display: inline-block;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.volver:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(233, 30, 99, 0.3);
+    filter: brightness(1.1);
+}
