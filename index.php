@@ -30,7 +30,7 @@
                     </tr>
                 </thead>
                 <tbody style="text-align:center">
-                    <!-- Filas de ejemplo -->
+                   
                     <tr>
                         <td style="color:#ccc">26</td><td style="color:#ccc">27</td><td style="color:#ccc">28</td><td style="color:#ccc">29</td><td style="color:#ccc">30</td><td style="color:#ccc">31</td><td>1</td>
                     </tr>
@@ -71,4 +71,5 @@
 </div>
 
 </body>
+
 </html>
