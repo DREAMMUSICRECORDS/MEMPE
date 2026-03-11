@@ -13,14 +13,15 @@
             <h1 style="margin:0">❤️ MI MEMPE</h1>
             <p style="margin:0; opacity:0.8">Hellen | pequeositA@gmail.com</p>
         </div>
-        <button class="btn-accion" style="width:auto; padding: 10px 20px;">Cerrar Sesión</button>
+        <button class="btn-accion" style="width:auto; padding: 10px 20px;" onclick="location.href='login.php'">Cerrar Sesión</button>
     </header>
 
     <main class="grid-principal">
         <section class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h2 style="margin:0">Febrero 2026</h2>
-                <button style="background:none; border:1px solid #ddd; padding:5px 15px; border-radius:5px; cursor:pointer">Configurar Ciclo</button>
+                <button class="btn-editar" onclick="abrirPerfil()">Editar Perfil</button> 
+             
             </div>
             
             <table class="tabla-mes">
@@ -30,7 +31,6 @@
                     </tr>
                 </thead>
                 <tbody style="text-align:center">
-                   
                     <tr>
                         <td style="color:#ccc">26</td><td style="color:#ccc">27</td><td style="color:#ccc">28</td><td style="color:#ccc">29</td><td style="color:#ccc">30</td><td style="color:#ccc">31</td><td>1</td>
                     </tr>
@@ -70,6 +70,62 @@
     </main>
 </div>
 
-</body>
+<div class="overlay" id="modalPerfil" style="display: none;">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Configuración de Perfil</h2>
+            <p>Actualiza tu información personal</p>
+            <span class="cerrar" onclick="cerrarPerfil()">✕</span>
+        </div>
 
+        <div class="tabs">
+            <button class="tab-modal activo">Perfil Personal</button>
+            <button class="tab-modal">Avatar</button>
+        </div>
+
+        <div class="perfil-avatar-seccion" style="text-align:center; margin: 20px 0;">
+            <div class="circulo-avatar" style="font-size: 40px; background:#f0f0f0; width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin: 0 auto;">👤</div>
+            <button class="btn-avatar-link" style="background:none; border:none; color:#e91e63; cursor:pointer; margin-top:10px;">Crear Avatar Personalizado</button>
+        </div>
+
+        <form class="form-grid" action="index.php" method="POST">
+            <div class="campo">
+                <label>Nombre Completo</label>
+                <input type="text" name="nuevo_nombre" placeholder="hellen">
+            </div>
+            <div class="campo">
+                <label>Correo Electrónico</label>
+                <input type="email" name="nuevo_correo" placeholder="correo@email.com">
+            </div>
+            <div class="campo">
+                <label>Teléfono</label>
+                <input type="text" placeholder="+57 300 000 0000">
+            </div>
+            <div class="campo">
+                <label>Fecha de Nacimiento</label>
+                <input type="date">
+            </div>
+            <div class="campo full">
+                <label>Biografía</label>
+                <textarea placeholder="Cuéntanos sobre ti..." style="width:100%; border-radius:8px; border:1px solid #ddd; padding:10px;"></textarea>
+            </div>
+            <div class="acciones">
+                <button type="submit" class="guardar">Guardar Cambios</button>
+                <button type="button" class="cancelar" onclick="cerrarPerfil()">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function abrirPerfil() {
+        document.getElementById('modalPerfil').style.display = 'flex';
+    }
+
+    function cerrarPerfil() {
+        document.getElementById('modalPerfil').style.display = 'none';
+    }
+</script>
+
+</body>
 </html>
