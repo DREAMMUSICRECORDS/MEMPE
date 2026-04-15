@@ -1,65 +1,83 @@
 <?php
-header('Content-Type: application/json');
+
+header('Content-Type: application/json; charset=utf-8');
+
 require_once 'conexion.php';
 
-$id_usuario = 1; 
+$id_usuario = $_GET['id_usuario'] ?? null;
+
 $metodo = $_SERVER['REQUEST_METHOD'];
 
-switch ($metodo) {
-    case 'GET':
-        $sql = "SELECT fecha FROM fechas_periodo WHERE id_usuario = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $id_usuario);
-        $stmt->execute();
-        $resultado = $stmt->get_result();
+if ($metodo == 'GET') {
+    
+    $obtener = "SELECT fecha FROM fechas_periodo WHERE id_usuario = $id_usuario";
+    $resultado = $conn->query($obtener);
+    
+
+    $fechas = array();
+    while ($fila = $resultado->fetch_assoc()) {
+        $fechas[] = $fila['fecha'];
+    }
+    
+
+    echo json_encode(array(
+        'estatus' => 'ok',
+        'fechas' => $fechas
+    ));
+}
+
+
+elseif ($metodo == 'POST') {
+    
+  
+    $datos = json_decode(file_get_contents('php://input'), true);
+    
+
+    if (!isset($datos['fecha'])) {
+        echo json_encode(array(
+            'estatus' => 'error',
+            'mensaje' => 'Debes enviar una fecha'
+        ));
+        exit;
+    }
+    
+    $fecha = $datos['fecha'];
+    
+
+    $buscar = "SELECT id FROM fechas_periodo WHERE id_usuario = $id_usuario AND fecha = '$fecha'";
+    $resultado = $conn->query($buscar);
+    
+    if ($resultado->num_rows > 0) {
+        $eliminar = "DELETE FROM fechas_periodo WHERE id_usuario = $id_usuario AND fecha = '$fecha'";
+        $conn->query($eliminar);
         
-        $fechas = [];
-        while ($fila = $resultado->fetch_assoc()) {
-            $fechas[] = $fila['fecha'];
-        }
-        echo json_encode(['status' => 'success', 'fechas' => $fechas]);
-        $stmt->close();
-        break;
-
-    case 'POST':
-        $datos = json_decode(file_get_contents('php://input'), true);
+        echo json_encode(array(
+            'estatus' => 'ok',
+            'mensaje' => 'Fecha eliminada'
+        ));
+    } else {
         
-        if (!isset($datos['fecha'])) {
-            echo json_encode(['status' => 'error', 'message' => 'Fecha no proporcionada']);
-            exit;
-        }
-
-        $fecha = $datos['fecha'];
-
-        $sql_check = "SELECT id FROM fechas_periodo WHERE id_usuario = ? AND fecha = ?";
-        $stmt_check = $conn->prepare($sql_check);
-        $stmt_check->bind_param("is", $id_usuario, $fecha);
-        $stmt_check->execute();
-        $resultado_check = $stmt_check->get_result();
-
-        if ($resultado_check->num_rows > 0) {
-            $sql_action = "DELETE FROM fechas_periodo WHERE id_usuario = ? AND fecha = ?";
-            $mensaje = "Fecha eliminada";
+        $guardar = "INSERT INTO fechas_periodo (id_usuario, fecha) VALUES ($id_usuario, '$fecha')";
+        
+        if ($conn->query($guardar)) {
+            echo json_encode(array(
+                'estatus' => 'ok',
+                'mensaje' => 'Fecha guardada'
+            ));
         } else {
-            $sql_action = "INSERT INTO fechas_periodo (id_usuario, fecha) VALUES (?, ?)";
-            $mensaje = "Fecha guardada";
+            echo json_encode(array(
+                'estatus' => 'error',
+                'mensaje' => 'Error al guardar: ' . $conn->error
+            ));
         }
-        $stmt_check->close();
+    }
+}
 
-        $stmt_action = $conn->prepare($sql_action);
-        $stmt_action->bind_param("is", $id_usuario, $fecha);
-        
-        if ($stmt_action->execute()) {
-            echo json_encode(['status' => 'success', 'message' => $mensaje]);
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Error: ' . $conn->error]);
-        }
-        $stmt_action->close();
-        break;
-
-    default:
-        echo json_encode(['status' => 'error', 'message' => 'Método no permitido']);
-        break;
+else {
+    echo json_encode(array(
+        'estatus' => 'error',
+        'mensaje' => 'Método no permitido'
+    ));
 }
 
 $conn->close();

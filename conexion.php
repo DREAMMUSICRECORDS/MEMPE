@@ -1,11 +1,21 @@
 <?php
-$host = "localhost";      
-$usuario = "root";        
-$password = "";           
-$basedatos = "mempe";    
+function conectar()
+{
+    $host = "localhost";
+    $usuario = "root";
+    $password = "";
+    $basedatos = "mempe";
 
+    $conexion = new mysqli($host, $usuario, $password, $basedatos);
 
-$conn = new stdClass();
-$conn->error = "Modo de prueba sin base de datos";
+    if ($conexion->connect_error) {
+        die("Conexión fallida: " . $conexion->connect_error);
+    }
 
-?>
+    return $conexion;
+}
+
+function cerrarConexion($conexion)
+{
+    $conexion->close();
+}

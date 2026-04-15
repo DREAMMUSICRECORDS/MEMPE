@@ -1,20 +1,45 @@
 <?php
-require_once 'conexion.php'; 
 
-$id_usuario = 1;
+session_start();
+require_once 'conexion.php';
 
-$datos_usuario = [
-    'nombre_completo' => 'Hellen (Modo Prueba)',
-    'correo' => 'hellen.prueba@email.com',
-    'telefono' => '+57 300 123 4567',
-    'fecha_nacimiento' => '1998-08-20',
-    'biografia' => 'Esta es una biografía de prueba porque no hay base de datos.'
-];
 
-if (!$datos_usuario) {
-    echo "Error: Usuario no encontrado.";
+if (!isset($_SESSION['usuario_id'])) {
+    header('Location: index.php');
     exit;
 }
+
+
+$id_usuario = $_SESSION['usuario_id'];
+
+
+$obtener_usuario = "SELECT nombre_completo, correo, contrasena, confirmar_contrasena FROM usuarios WHERE id = $id_usuario";
+$resultado = $conn->query($obtener_usuario);
+
+
+$datos_usuario = array(
+    'nombre_completo' => '',
+    'correo' => '',
+    'contrasena' => '',     
+    'confirmar_contrasena' => ''
+);
+
+
+if ($resultado->num_rows > 0) {
+    $datos_usuario = $resultado->fetch_assoc();
+}
+
+
+$fechas_periodo_bd = array();
+$obtener_fechas = "SELECT fecha FROM fechas_periodo WHERE id_usuario = $id_usuario";
+$resultado_fechas = $conn->query($obtener_fechas);
+
+
+while ($fila = $resultado_fechas->fetch_assoc()) {
+    $fechas_periodo_bd[] = $fila['fecha'];
+}
+
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -196,7 +221,7 @@ if (!$datos_usuario) {
         </div>
         <div style="display: flex; gap: 10px;">
             <button class="volver" onclick="location.href='index.php'">Ir al Inicio</button>
-            <button class="btn-accion" style="width:auto; padding: 10px 20px;" onclick="location.href='index.php'">Cerrar Sesión</button>
+            <button class="btn-accion" style="width:auto; padding: 10px 20px;" onclick="location.href='logout.php'">Cerrar Sesión</button>
         </div>
     </header>
 
@@ -226,7 +251,7 @@ if (!$datos_usuario) {
                 <div class="tarjeta-info">
                     <h4 style="margin:0; color:var(--secundario)">Resumen Admin</h4>
                     <h3 style="margin:5px 0" id="estado-periodo">Calculando...</h3>
-                    <small>Modo prueba: Haz clic para ver cómo se pinta, pero no se guardará.</small>
+                    <small>Haz clic en un día para marcar periodo</small>
                 </div>
 
                 <div class="tarjeta-info" style="border-left-color: #4caf50;">
@@ -322,7 +347,7 @@ if (!$datos_usuario) {
         </div>
 
         <div id="tab-perfil-content" class="tab-content activo">
-            <form class="form-grid" action="" method="POST" onsubmit="alert('Hiciste clic en Guardar Perfil (Simulado)'); return false;">
+            <form class="form-grid" action="actualizar_perfil.php" method="POST">
                 <div class="campo">
                     <label>Nombre Completo</label>
                     <input type="text" name="nuevo_nombre" required value="<?php echo htmlspecialchars($datos_usuario['nombre_completo']); ?>">
@@ -412,8 +437,9 @@ if (!$datos_usuario) {
 
 <script>
     let fechaReferencia = new Date(); 
-    let fechasPeriodoReal = ['2026-02-15', '2026-02-16', '2026-02-17']; 
+    let fechasPeriodoReal = <?php echo json_encode($fechas_periodo_bd); ?>;
     const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    let idUsuario = <?php echo $id_usuario; ?>;
 
     const fechaInicioEmbarazo = new Date('2025-10-01T00:00:00'); 
     
@@ -591,18 +617,97 @@ if (!$datos_usuario) {
         actualizarSidebar(predicciones);
     }
 
-    function alternarDiaPeriodo(fecha) {
+    async function alternarDiaPeriodo(fecha) {
         if (new Date(fecha) > new Date()) { alert("No puedes marcar fechas futuras."); return; }
+        
         const index = fechasPeriodoReal.indexOf(fecha);
-        if (index > -1) { fechasPeriodoReal.splice(index, 1); } 
-        else { fechasPeriodoReal.push(fecha); }
+        const esAgregar = (index === -1);
+        
+      
+        if (esAgregar) {
+            fechasPeriodoReal.push(fecha);
+        } else {
+            fechasPeriodoReal.splice(index, 1);
+        }
+        
+     
+        try {
+            const response = await fetch('periodo.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fecha: fecha })
+            });
+            const data = await response.json();
+            if (data.status !== 'success') {
+         
+                if (esAgregar) {
+                    const idx = fechasPeriodoReal.indexOf(fecha);
+                    if (idx !== -1) fechasPeriodoReal.splice(idx, 1);
+                } else {
+                    fechasPeriodoReal.push(fecha);
+                }
+                alert('Error al guardar en el servidor');
+            }
+        } catch(error) {
+           
+            if (esAgregar) {
+                const idx = fechasPeriodoReal.indexOf(fecha);
+                if (idx !== -1) fechasPeriodoReal.splice(idx, 1);
+            } else {
+                fechasPeriodoReal.push(fecha);
+            }
+            alert('Error de conexión: ' + error.message);
+        }
+        
         renderizarCalendario();
     }
 
-    function cambiarMes(delta) { fechaReferencia.setMonth(fechaReferencia.getMonth() + delta); renderizarCalendario(); }
-    function calcularPrediccionesBasicas(fR) { if (fR.length === 0) return []; const fO = [...fR].sort(); const uF = new Date(fO[fO.length - 1]); let pF = []; let iS = new Date(uF); for (let i = 0; i < 3; i++) { iS.setDate(iS.getDate() + 28); for (let d = 0; d < 5; d++) { let dP = new Date(iS); dP.setDate(dP.getDate() + d); pF.push(formatearFechaISO(dP)); } } return pF; }
-    function actualizarSidebar(p) { const prox = p.sort().find(f => new Date(f) > new Date()); let fechaStr = "--"; if (prox) { fechaStr = new Date(prox + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }); } document.getElementById('fecha-proxima-prediccion').innerText = fechaStr; const hoyISO = formatearFechaISO(new Date()); let estado = "No hay periodo hoy"; if (fechasPeriodoReal.includes(hoyISO)) { estado = "Menstruación Activa (Simulado)"; } else if (p.includes(hoyISO)) { estado = "Menstruación Probable (Predicción)"; } document.getElementById('estado-periodo').innerText = estado; }
-    function formatearFechaISO(date) { try { return date.toISOString().split('T')[0]; } catch(e){ return ""; } }
+    function cambiarMes(delta) { 
+        fechaReferencia.setMonth(fechaReferencia.getMonth() + delta); 
+        renderizarCalendario(); 
+    }
+    
+    function calcularPrediccionesBasicas(fR) { 
+        if (fR.length === 0) return []; 
+        const fO = [...fR].sort(); 
+        const uF = new Date(fO[fO.length - 1]); 
+        let pF = []; 
+        let iS = new Date(uF); 
+        for (let i = 0; i < 3; i++) { 
+            iS.setDate(iS.getDate() + 28); 
+            for (let d = 0; d < 5; d++) { 
+                let dP = new Date(iS); 
+                dP.setDate(dP.getDate() + d); 
+                pF.push(formatearFechaISO(dP)); 
+            } 
+        } 
+        return pF; 
+    }
+    
+    function actualizarSidebar(p) { 
+        const prox = p.sort().find(f => new Date(f) > new Date()); 
+        let fechaStr = "--"; 
+        if (prox) { 
+            fechaStr = new Date(prox + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }); 
+        } 
+        document.getElementById('fecha-proxima-prediccion').innerText = fechaStr; 
+        const hoyISO = formatearFechaISO(new Date()); 
+        let estado = "No hay periodo hoy"; 
+        if (fechasPeriodoReal.includes(hoyISO)) { 
+            estado = "Menstruación Activa"; 
+        } else if (p.includes(hoyISO)) { 
+            estado = "Menstruación Probable (Predicción)"; 
+        } 
+        document.getElementById('estado-periodo').innerText = estado; 
+    }
+    
+    function formatearFechaISO(date) { 
+        try { 
+            return date.toISOString().split('T')[0]; 
+        } catch(e){ 
+            return ""; 
+        } 
+    }
 
     function abrirPerfil() { document.getElementById('modalPerfil').style.display = 'flex'; cambiarTabModal('perfil'); } 
     function cerrarPerfil() { document.getElementById('modalPerfil').style.display = 'none'; }
@@ -612,14 +717,24 @@ if (!$datos_usuario) {
     function cerrarModalCita() { document.getElementById('modalCita').style.display = 'none'; }
 
     function cambiarTabModal(tabNombre) {
-        document.querySelectorAll('.tab-modal').forEach(btn => btn.classList.remove('activo'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('activo'));
+        const tabPerfilBtn = document.querySelector('.tab-modal[onclick*="perfil"]');
+        const tabAvatarBtn = document.querySelector('.tab-modal[onclick*="avatar"]');
+        const tabPerfilContent = document.getElementById('tab-perfil-content');
+        const tabAvatarContent = document.getElementById('tab-avatar-content');
+        
+        if (!tabPerfilBtn || !tabAvatarBtn || !tabPerfilContent || !tabAvatarContent) return;
+        
+        tabPerfilBtn.classList.remove('activo');
+        tabAvatarBtn.classList.remove('activo');
+        tabPerfilContent.classList.remove('activo');
+        tabAvatarContent.classList.remove('activo');
+        
         if (tabNombre === 'perfil') {
-            document.querySelector('.tab-modal[onclick*="perfil"]').classList.add('activo');
-            document.getElementById('tab-perfil-content').classList.add('activo');
+            tabPerfilBtn.classList.add('activo');
+            tabPerfilContent.classList.add('activo');
         } else if (tabNombre === 'avatar') {
-            document.querySelector('.tab-modal[onclick*="avatar"]').classList.add('activo');
-            document.getElementById('tab-avatar-content').classList.add('activo');
+            tabAvatarBtn.classList.add('activo');
+            tabAvatarContent.classList.add('activo');
         }
     }
 
@@ -639,8 +754,17 @@ if (!$datos_usuario) {
         const hA = document.getElementById('header-avatar-img');
         const mA = document.getElementById('modal-avatar-img');
         if(!hA || !mA) return;
-        if (img) { hA.style.backgroundImage = `url(${img})`; hA.innerText = ""; mA.style.backgroundImage = `url(${img})`; mA.innerText = "";
-        } else { hA.style.backgroundImage = ""; hA.innerText = "👤"; mA.style.backgroundImage = ""; mA.innerText = "👤"; }
+        if (img) { 
+            hA.style.backgroundImage = `url(${img})`; 
+            hA.innerText = ""; 
+            mA.style.backgroundImage = `url(${img})`; 
+            mA.innerText = "";
+        } else { 
+            hA.style.backgroundImage = ""; 
+            hA.innerText = "👤"; 
+            mA.style.backgroundImage = ""; 
+            mA.innerText = "👤"; 
+        }
     }
 
     function guardarAvatarEnStorage(img) { try { localStorage.setItem('mempe_avatar_simulado', img); } catch (e) {} }
