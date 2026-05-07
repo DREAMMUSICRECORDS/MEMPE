@@ -27,14 +27,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
 
     if ($conn->query($actualizar)) {
-   
-        $_SESSION['usuario_nombre'] = $nombre;
-       
-        header("Location: calendarioAdmin.php?actualizado=ok");
-        exit;
-    } else {
-        echo "Error al actualizar: " . $conn->error;
-    }
+    $_SESSION['usuario_nombre'] = $nombre;
+
+    header("Location: index.php?actualizado=ok");
+    exit;
 }
 
 $conn->close();
